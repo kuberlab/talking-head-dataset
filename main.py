@@ -53,7 +53,6 @@ def main():
     for n, link in enumerate(links):
         mlboard.update_task_info({
             "youtube.link": link,
-            "youtube.length": link,
             "youtube.downloaded": "false",
         })
         video_file, audio_file = youtube.download(link)
