@@ -1,5 +1,6 @@
 import os
 import shlex
+import shutil
 import subprocess
 
 
@@ -29,4 +30,4 @@ def apply_audio_to(cropped_video_file, source_audio_file, audio_start, audio_end
         raise ApplyAudioException("Failed run %s: exit code %s" % (cmd, code))
 
     os.remove(audio_file)
-    os.rename(video_with_audio_file, cropped_video_file)
+    shutil.move(video_with_audio_file, cropped_video_file)

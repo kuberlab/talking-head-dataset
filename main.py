@@ -45,7 +45,11 @@ def main():
 
     for link in links:
         video_file, audio_file = youtube.download(link)
-        process.process_video(video_file, audio_file, duration=args.duration)
+        process.process_video(
+            video_file, audio_file,
+            output_dir=args.output_dir,
+            duration=args.duration,
+        )
         os.remove(video_file)
         if audio_file != video_file:
             os.remove(audio_file)

@@ -1,5 +1,7 @@
 import logging
 import os
+import shutil
+import tempfile
 import threading
 
 import cv2
@@ -49,10 +51,10 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
     if output_dir is None:
         output_dir = "./output"
 
-    if not os.path.isdir(output_dir):
-        os.makedirs(output_dir, 0o755)
+    temp_dir = tempfile.gettempdir()
 
     video_part_file = None
+    final_file = None
     video_part_start = None
     video_writer = None
     previous_frame = None
@@ -64,10 +66,14 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
             if not success:
                 break
 
+            if frame_idx > 0 and frame_idx % 100 == 0:
+                logging.info("processed {} frames".format(frame_idx))
+
             try:
                 check_frame.is_correct(frame, previous_frame)
                 if video_part_file is None:
-                    video_part_file = os.path.join(output_dir, _out_video_filename(video_file, frame_idx))
+                    video_part_file = os.path.join(temp_dir, _out_video_filename(video_file, frame_idx))
+                    final_file = os.path.join(output_dir, _out_video_filename(video_file, frame_idx))
                     if os.path.exists(video_part_file):
                         os.remove(video_part_file)
                     logging.info("Start video fragment {}".format(video_part_file))
@@ -89,6 +95,10 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
                         try:
                             audio.apply_audio_to(video_part_file, audio_file, video_part_start / fps, frame_idx / fps)
                             logging.info("Audio joined to fragment %s" % video_part_file)
+                            if not os.path.isdir(output_dir):
+                                os.makedirs(output_dir, 0o755)
+                            shutil.move(video_part_file, final_file)
+                            logging.info("File stored to %s" % final_file)
                         except audio.ApplyAudioException as e:
                             logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
 
