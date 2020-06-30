@@ -3,6 +3,7 @@ import logging
 import os
 
 import check_frame
+import mlboard
 import process
 import youtube
 from log import init_logging
@@ -42,8 +43,14 @@ def main():
         face_detect_threshold=args.face_detect_threshold,
         change_scene_threshold=args.change_scene_threshold,
     )
+    m = mlboard.get()
 
-    for link in links:
+    for n, link in enumerate(links):
+        if m is not None:
+            m.update_task_info({
+                "#youtube.link": link,
+                "#youtube.count": n+1,
+            })
         video_file, audio_file = youtube.download(link)
         process.process_video(
             video_file, audio_file,
