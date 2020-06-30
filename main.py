@@ -43,23 +43,41 @@ def main():
         face_detect_threshold=args.face_detect_threshold,
         change_scene_threshold=args.change_scene_threshold,
     )
-    m = mlboard.get()
+
+    total_fragments = 0
+
+    mlboard.update_task_info({
+        "total.count": len(links),
+    })
 
     for n, link in enumerate(links):
-        if m is not None:
-            m.update_task_info({
-                "#youtube.link": link,
-                "#youtube.count": n+1,
-            })
+        mlboard.update_task_info({
+            "youtube.link": link,
+            "youtube.length": link,
+            "youtube.downloaded": "false",
+        })
         video_file, audio_file = youtube.download(link)
-        process.process_video(
+        mlboard.update_task_info({
+            "youtube.downloaded": "true",
+        })
+        fragments = process.process_video(
             video_file, audio_file,
             output_dir=args.output_dir,
             duration=args.duration,
         )
+        total_fragments += fragments
+        mlboard.update_task_info({
+            "total.fragments_done": total_fragments,
+            "total.processed": n + 1,
+        })
         os.remove(video_file)
         if audio_file != video_file:
             os.remove(audio_file)
+
+    mlboard.update_task_info({
+        "youtube.processing": "-",
+        "youtube.processed": len(links),
+    })
 
 
 if __name__ == '__main__':

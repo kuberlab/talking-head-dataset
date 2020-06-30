@@ -62,12 +62,6 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
 
     fragments = 0
 
-    m = mlboard.get()
-    if m is not None:
-        m.update_task_info({
-            "#process.frame": frame_idx,
-        })
-
     try:
 
         while cap.isOpened():
@@ -75,12 +69,11 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
             if not success:
                 break
 
-            if frame_idx > 0 and frame_idx % 100 == 0:
-                logging.info("processed {} frames".format(frame_idx))
-                if m is not None:
-                    m.update_task_info({
-                        "#process.frame": frame_idx,
-                    })
+            if frame_idx % 100 == 0:
+                mlboard.update_task_info({
+                    "process.frames_processed": frame_idx,
+                    "youtube.frames": n_frames,
+                })
 
             try:
                 check_frame.is_correct(frame, previous_frame)
@@ -113,10 +106,9 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
                             shutil.move(video_part_file, final_file)
                             logging.info("File stored to %s" % final_file)
                             fragments += 1
-                            if m is not None:
-                                m.update_task_info({
-                                    "#process.fragments": fragments,
-                                })
+                            mlboard.update_task_info({
+                                "process.fragments": fragments,
+                            })
                         except audio.ApplyAudioException as e:
                             logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
 
@@ -148,6 +140,8 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
             os.remove(video_part_file)
 
     safe_run(cap.release)
+
+    return fragments
 
 
 def safe_run(r):

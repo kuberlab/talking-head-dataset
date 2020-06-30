@@ -24,3 +24,10 @@ def get():
         else:
             logging.info('Use mlboard parameters logging.')
     return mlboard
+
+
+def update_task_info(data, app_name=None,
+                         task_name=None, build_id=None, fail_on_error=False):
+    m = get()
+    if m is not None:
+        m.update_task_info(data, app_name, task_name, build_id, fail_on_error)
