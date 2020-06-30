@@ -103,7 +103,8 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
                     video_writer = None
                     video_part_start = None
 
-                    os.remove(video_part_file)
+                    if os.path.exists(video_part_file):
+                        os.remove(video_part_file)
                     video_part_file = None
 
             frame_idx += 1
@@ -115,7 +116,8 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
     if video_writer is not None:
         logging.warning("Interrupt tailing video fragment {}".format(video_part_file))
         safe_run(video_writer.release)
-        os.remove(video_part_file)
+        if os.path.exists(video_part_file):
+            os.remove(video_part_file)
 
     safe_run(cap.release)
 
