@@ -110,14 +110,15 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
 
             elif finish_recording:
 
-                fragments = finalize_video(
-                    video_writer, video_part_file, audio_file,
-                    video_part_start, frame_idx, fps, final_file, fragments,
-                )
+                if video_writer is not None:
+                    fragments = finalize_video(
+                        video_writer, video_part_file, audio_file,
+                        video_part_start, frame_idx, fps, final_file, fragments,
+                    )
 
-                video_writer = None
-                video_part_start = None
-                video_part_file = None
+                    video_writer = None
+                    video_part_start = None
+                    video_part_file = None
 
             elif frame_is_correct:
 
