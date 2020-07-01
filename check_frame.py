@@ -32,4 +32,5 @@ def is_correct(frame, previous=None):
 
 
 def _small_img(image, width=100, height=100):
-    return image_resize(image, width=width, height=height, contain_proportions=False)
+    resized, _ = image_resize(image, width=width, height=height, contain_proportions=False)
+    return resized

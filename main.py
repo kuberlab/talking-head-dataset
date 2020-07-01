@@ -14,7 +14,7 @@ def main():
     parser = argparse.ArgumentParser()
     parser.add_argument('--link', type=str, default=None, help='Process single YouTube video specified in link')
     parser.add_argument('--csv', type=str, default=None, help='Process several YouTube videos, link in CSV')
-    parser.add_argument('--duration', type=int, default=10, help='Processed video duration in seconds')
+    parser.add_argument('--duration', type=int, default=None, help='Processed video duration in seconds, not crop if not set')
     parser.add_argument('--output-dir', type=str, default=None, help='Output dir')
     parser.add_argument('--models-dir', type=str, default=None, help='Models dir')
     parser.add_argument('--face-detect-threshold', type=float, default=.5, help='Face detect threshold')

@@ -15,12 +15,13 @@ class ProcessException(Exception):
     pass
 
 
-def _out_video_filename(video_filename, frame_idx):
+def _out_video_filename(video_filename, frame_idx, duration=None):
     ext = os.path.splitext(os.path.basename(video_filename))
-    return "{}-{}{}".format(ext[0], frame_idx, ext[1])
+    d = "" if duration is None else "-{}s".format(duration)
+    return "{}-{}{}{}".format(ext[0], frame_idx, d, ext[1])
 
 
-def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_frames=0):
+def process_video(video_file, audio_file=None, output_dir=None, duration=None, ff_frames=0):
     cap = cv2.VideoCapture(video_file)
     frame_idx = 0
 
@@ -43,7 +44,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
     )
     fourcc = cv2.VideoWriter_fourcc(*codec)
 
-    if video_duration < duration:
+    if duration is not None and video_duration < duration:
         raise ProcessException("Source video's length {} seconds "
                                "it is shorter than {} seconds".format(video_duration, duration))
 
@@ -51,6 +52,8 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
 
     if output_dir is None:
         output_dir = "./output"
+    if not os.path.isdir(output_dir):
+        os.makedirs(output_dir, 0o755)
 
     temp_dir = tempfile.gettempdir()
 
@@ -75,11 +78,53 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
                     "youtube.frames": n_frames,
                 })
 
+            frame_is_correct = False
+            finish_recording = False
+            interrupt_recording = False
+            interrupt_recording_reason = None
+
             try:
-                check_frame.is_correct(frame, previous_frame)
+                frame_is_correct = check_frame.is_correct(frame, previous_frame)
+                if duration is not None and frame_idx - video_part_start >= duration * fps:
+                    finish_recording = True
+
+            except check_frame.CheckFrameException as e:
+                if duration is not None:
+                    interrupt_recording = True
+                    interrupt_recording_reason = str(e)
+                else:
+                    finish_recording = True
+
+            if interrupt_recording:
+
+                if video_writer is not None:
+                    logging.warning("Interrupt video fragment {} on frame {} because {}".format(
+                        video_part_file, frame_idx, interrupt_recording_reason))
+                    safe_run(video_writer.release)
+                    video_writer = None
+                    video_part_start = None
+
+                    if os.path.exists(video_part_file):
+                        os.remove(video_part_file)
+                    video_part_file = None
+
+            elif finish_recording:
+
+                fragments = finalize_video(
+                    video_writer, video_part_file, audio_file,
+                    video_part_start, frame_idx, fps, final_file, fragments,
+                )
+
+                video_writer = None
+                video_part_start = None
+                video_part_file = None
+
+            elif frame_is_correct:
+
                 if video_part_file is None:
-                    video_part_file = os.path.join(temp_dir, _out_video_filename(video_file, frame_idx))
-                    final_file = os.path.join(output_dir, _out_video_filename(video_file, frame_idx))
+                    ovf = _out_video_filename(video_file, frame_idx, duration)
+                    video_part_file = os.path.join(temp_dir, ovf)
+                    final_file = os.path.join(output_dir, ovf)
                     if os.path.exists(video_part_file):
                         os.remove(video_part_file)
                     logging.info("Start video fragment {}".format(video_part_file))
@@ -92,41 +137,6 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
                 if video_writer is not None:
                     video_writer.write(frame)
 
-                if frame_idx - video_part_start >= duration * fps:
-                    logging.info("Finish video fragment {}".format(video_part_file))
-                    safe_run(video_writer.release)
-                    video_writer = None
-
-                    if audio_file:
-                        try:
-                            audio.apply_audio_to(video_part_file, audio_file, video_part_start / fps, frame_idx / fps)
-                            logging.info("Audio joined to fragment %s" % video_part_file)
-                            if not os.path.isdir(output_dir):
-                                os.makedirs(output_dir, 0o755)
-                            shutil.move(video_part_file, final_file)
-                            logging.info("File stored to %s" % final_file)
-                            fragments += 1
-                            mlboard.update_task_info({
-                                "process.fragments": fragments,
-                            })
-                        except audio.ApplyAudioException as e:
-                            logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
-
-                    video_part_start = None
-                    video_part_file = None
-
-            except check_frame.CheckFrameException as e:
-                if video_writer is not None:
-                    logging.warning("Interrupt video fragment {} on frame {} because {}".format(
-                        video_part_file, frame_idx, str(e)))
-                    safe_run(video_writer.release)
-                    video_writer = None
-                    video_part_start = None
-
-                    if os.path.exists(video_part_file):
-                        os.remove(video_part_file)
-                    video_part_file = None
-
             frame_idx += 1
             previous_frame = frame
 
@@ -134,10 +144,16 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=10, ff_
         logging.warning("Keyboard interrupt")
 
     if video_writer is not None:
-        logging.warning("Interrupt tailing video fragment {}".format(video_part_file))
-        safe_run(video_writer.release)
-        if os.path.exists(video_part_file):
-            os.remove(video_part_file)
+        if duration is None:
+            fragments = finalize_video(
+                video_writer, video_part_file, audio_file,
+                video_part_start, frame_idx, fps, final_file, fragments,
+            )
+        else:
+            logging.warning("Interrupt tailing video fragment {}".format(video_part_file))
+            safe_run(video_writer.release)
+            if os.path.exists(video_part_file):
+                os.remove(video_part_file)
 
     safe_run(cap.release)
 
@@ -148,6 +164,30 @@ def safe_run(r):
     t = threading.Thread(target=r)
     t.start()
     t.join()
+
+
+def finalize_video(video_writer, video_part_file, audio_file, video_part_start, frame_idx, fps, final_file, fragments):
+    logging.info("Finish video fragment {}".format(video_part_file))
+    safe_run(video_writer.release)
+
+    if audio_file:
+        try:
+            audio.apply_audio_to(video_part_file, audio_file, video_part_start / fps, frame_idx / fps)
+            logging.info("Audio joined to fragment %s" % video_part_file)
+        except audio.ApplyAudioException as e:
+            os.remove(video_part_file)
+            logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
+            return False
+
+    shutil.move(video_part_file, final_file)
+    logging.info("File stored to %s" % final_file)
+
+    fragments += 1
+    mlboard.update_task_info({
+        "process.fragments": fragments,
+    })
+
+    return True
 
 
 # if __name__ == '__main__':
