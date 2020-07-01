@@ -65,6 +65,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
 
     fragments = 0
     frames_to_write = []
+    frames_written = 0
 
     try:
 
@@ -124,11 +125,11 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
 
                 if video_writer is not None:
 
-                    flush_video(video_writer, frames_to_write)
+                    frames_written += flush_video(video_writer, frames_to_write)
                     frames_to_write = []
 
                     fragments = finalize_video(
-                        video_writer, video_part_file, audio_file,
+                        video_writer, video_part_file, audio_file, frames_written,
                         video_part_start, frame_idx, fps, final_file, fragments,
                     )
 
@@ -151,8 +152,9 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
                         video_part_file, fourcc, fps,
                         frameSize=(width, height)
                     )
+                    frames_written = 0
 
-                flush_video(video_writer, frames_to_write)
+                frames_written += flush_video(video_writer, frames_to_write)
                 frames_to_write = []
 
             previous_frame = frame
@@ -163,7 +165,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
     if video_writer is not None:
         if duration is None:
             fragments = finalize_video(
-                video_writer, video_part_file, audio_file,
+                video_writer, video_part_file, audio_file, frames_written,
                 video_part_start, frame_idx, fps, final_file, fragments,
             )
         else:
@@ -183,8 +185,12 @@ def safe_run(r):
     t.join()
 
 
-def finalize_video(video_writer, video_part_file, audio_file, video_part_start, frame_idx, fps, final_file, fragments):
-    logging.info("Finish video fragment {}".format(video_part_file))
+def finalize_video(
+        video_writer, video_part_file, audio_file, frames_written,
+        video_part_start, frame_idx, fps, final_file, fragments,
+):
+    logging.info("Finish video fragment {}: {}-{}, frames written {}".format(
+        video_part_file, video_part_start, frame_idx, frames_written))
     safe_run(video_writer.release)
 
     if audio_file:
@@ -211,9 +217,12 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
 
 
 def flush_video(video_writer, frames_to_write):
+    frames_written = 0
     if video_writer is not None:
         for frame in frames_to_write:
             video_writer.write(frame)
+            frames_written += 1
+    return frames_written
 
 
 # if __name__ == '__main__':
