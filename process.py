@@ -85,7 +85,9 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
 
             try:
                 frame_is_correct = check_frame.is_correct(frame, previous_frame)
-                if duration is not None and frame_idx - video_part_start >= duration * fps:
+                if duration is not None \
+                        and video_part_start is not None \
+                        and frame_idx - video_part_start >= duration * fps:
                     finish_recording = True
 
             except check_frame.CheckFrameException as e:
