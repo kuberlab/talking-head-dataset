@@ -149,6 +149,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
                 if video_writer is not None:
                     for frame in frames_to_write:
                         video_writer.write(frame)
+                    frames_to_write = []
 
             previous_frame = frame
 
