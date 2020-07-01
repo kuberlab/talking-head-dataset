@@ -153,6 +153,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
                         frameSize=(width, height)
                     )
                     frames_written = 0
+                    frames_to_write = []
 
                 frames_written += flush_video(video_writer, frames_to_write)
                 frames_to_write = []
