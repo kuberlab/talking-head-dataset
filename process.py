@@ -148,3 +148,8 @@ def safe_run(r):
     t = threading.Thread(target=r)
     t.start()
     t.join()
+
+
+# if __name__ == '__main__':
+#     check_frame.initialize("./models")
+#     process_video("./video-2AFpAATHXtc.mp4", "./audio-2AFpAATHXtc.mp4", ff_frames=1000)

@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--csv', type=str, default=None, help='Process several YouTube videos, link in CSV')
     parser.add_argument('--duration', type=int, default=10, help='Processed video duration in seconds')
     parser.add_argument('--output-dir', type=str, default=None, help='Output dir')
-    parser.add_argument('--face-detect-model', type=str, default=None, help='Face detection model')
+    parser.add_argument('--models-dir', type=str, default=None, help='Models dir')
     parser.add_argument('--face-detect-threshold', type=float, default=.5, help='Face detect threshold')
     parser.add_argument('--change-scene-threshold', type=float, default=.5, help='Change scene threshold')
     args = parser.parse_args()
@@ -39,7 +39,7 @@ def main():
     logging.info("Going to process {} YouTube links".format(len(links)))
 
     check_frame.initialize(
-        face_detect_model_path=args.face_detect_model,
+        models_dir=args.models_dir,
         face_detect_threshold=args.face_detect_threshold,
         change_scene_threshold=args.change_scene_threshold,
     )
