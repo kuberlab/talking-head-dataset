@@ -15,6 +15,7 @@ def main():
     parser.add_argument('--link', type=str, default=None, help='Process single YouTube video specified in link')
     parser.add_argument('--csv', type=str, default=None, help='Process several YouTube videos, link in CSV')
     parser.add_argument('--duration', type=int, default=None, help='Processed video duration in seconds, not crop if not set')
+    parser.add_argument('--check-each-frame', type=int, default=1, help='Check each N frame for correct')
     parser.add_argument('--output-dir', type=str, default=None, help='Output dir')
     parser.add_argument('--models-dir', type=str, default=None, help='Models dir')
     parser.add_argument('--face-detect-threshold', type=float, default=.5, help='Face detect threshold')
@@ -63,6 +64,7 @@ def main():
             video_file, audio_file,
             output_dir=args.output_dir,
             duration=args.duration,
+            check_each_frame=args.check_each_frame,
         )
         total_fragments += fragments
         mlboard.update_task_info({

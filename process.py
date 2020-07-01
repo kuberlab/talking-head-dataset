@@ -21,9 +21,9 @@ def _out_video_filename(video_filename, frame_idx, duration=None):
     return "{}-{}{}{}".format(ext[0], frame_idx, d, ext[1])
 
 
-def process_video(video_file, audio_file=None, output_dir=None, duration=None, ff_frames=0):
+def process_video(video_file, audio_file=None, output_dir=None, duration=None, ff_frames=0, check_each_frame=1):
     cap = cv2.VideoCapture(video_file)
-    frame_idx = 0
+    frame_idx = -1
 
     if ff_frames:
         cap.set(cv2.CAP_PROP_POS_FRAMES, ff_frames)
@@ -64,6 +64,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
     previous_frame = None
 
     fragments = 0
+    frames_to_write = []
 
     try:
 
@@ -72,25 +73,33 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
             if not success:
                 break
 
+            frame_idx += 1
+
+            frames_to_write.append(frame)
+
             if frame_idx % 100 == 0:
                 mlboard.update_task_info({
                     "process.frames_processed": frame_idx,
                     "youtube.frames": n_frames,
                 })
 
-            frame_is_correct = False
+            if frame_idx % check_each_frame > 0:
+                continue
+
             finish_recording = False
             interrupt_recording = False
             interrupt_recording_reason = None
 
             try:
-                frame_is_correct = check_frame.is_correct(frame, previous_frame)
+                check_frame.is_correct(frame, previous_frame)
+                frame_is_correct = True
                 if duration is not None \
                         and video_part_start is not None \
                         and frame_idx - video_part_start >= duration * fps:
                     finish_recording = True
 
             except check_frame.CheckFrameException as e:
+                frame_is_correct = False
                 if duration is not None:
                     interrupt_recording = True
                     interrupt_recording_reason = str(e)
@@ -138,9 +147,9 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
                     )
 
                 if video_writer is not None:
-                    video_writer.write(frame)
+                    for frame in frames_to_write:
+                        video_writer.write(frame)
 
-            frame_idx += 1
             previous_frame = frame
 
     except KeyboardInterrupt:
@@ -195,4 +204,4 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
 
 # if __name__ == '__main__':
 #     check_frame.initialize("./models")
-#     process_video("./video-2AFpAATHXtc.mp4", "./audio-2AFpAATHXtc.mp4", ff_frames=1000)
+#     process_video("./video-2AFpAATHXtc.mp4", "./audio-2AFpAATHXtc.mp4", ff_frames=1000, duration=1, check_each_frame=3)
