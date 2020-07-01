@@ -123,6 +123,10 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
             elif finish_recording:
 
                 if video_writer is not None:
+
+                    flush_video(video_writer, frames_to_write)
+                    frames_to_write = []
+
                     fragments = finalize_video(
                         video_writer, video_part_file, audio_file,
                         video_part_start, frame_idx, fps, final_file, fragments,
@@ -135,22 +139,21 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
             elif frame_is_correct:
 
                 if video_part_file is None:
-                    ovf = _out_video_filename(video_file, frame_idx, duration)
+                    video_part_start = frame_idx
+                    ovf = _out_video_filename(video_file, video_part_start, duration)
                     video_part_file = os.path.join(temp_dir, ovf)
                     final_file = os.path.join(output_dir, ovf)
                     if os.path.exists(video_part_file):
                         os.remove(video_part_file)
-                    logging.info("Start video fragment {}".format(video_part_file))
-                    video_part_start = frame_idx
+                    logging.info("Start video fragment {} from frame {}".format(
+                        video_part_file, video_part_start))
                     video_writer = cv2.VideoWriter(
                         video_part_file, fourcc, fps,
                         frameSize=(width, height)
                     )
 
-                if video_writer is not None:
-                    for frame in frames_to_write:
-                        video_writer.write(frame)
-                    frames_to_write = []
+                flush_video(video_writer, frames_to_write)
+                frames_to_write = []
 
             previous_frame = frame
 
@@ -187,7 +190,10 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
     if audio_file:
         try:
             audio.apply_audio_to(video_part_file, audio_file, video_part_start / fps, frame_idx / fps)
-            logging.info("Audio joined to fragment %s" % video_part_file)
+            logging.info("Audio joined to fragment %s: %s-%s, %s-%s sec" % (
+                video_part_file, video_part_start, frame_idx,
+                video_part_start / fps, frame_idx / fps,
+            ))
         except audio.ApplyAudioException as e:
             os.remove(video_part_file)
             logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
@@ -202,6 +208,12 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
     })
 
     return fragments
+
+
+def flush_video(video_writer, frames_to_write):
+    if video_writer is not None:
+        for frame in frames_to_write:
+            video_writer.write(frame)
 
 
 # if __name__ == '__main__':
