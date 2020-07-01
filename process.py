@@ -100,6 +100,7 @@ def process_video(video_file, audio_file=None, output_dir=None, duration=None, f
 
             except check_frame.CheckFrameException as e:
                 frame_is_correct = False
+                frames_to_write = []
                 if duration is not None:
                     interrupt_recording = True
                     interrupt_recording_reason = str(e)
