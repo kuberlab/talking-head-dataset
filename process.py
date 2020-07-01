@@ -191,7 +191,7 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
         except audio.ApplyAudioException as e:
             os.remove(video_part_file)
             logging.error("Join with audio error: %s, file %s removed" % (str(e), video_part_file))
-            return False
+            return fragments
 
     shutil.move(video_part_file, final_file)
     logging.info("File stored to %s" % final_file)
@@ -201,7 +201,7 @@ def finalize_video(video_writer, video_part_file, audio_file, video_part_start, 
         "process.fragments": fragments,
     })
 
-    return True
+    return fragments
 
 
 # if __name__ == '__main__':
